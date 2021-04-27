@@ -4,6 +4,7 @@ from datetime import datetime
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm import tqdm
 
 
 def err(FARs, FRRs):
@@ -92,13 +93,13 @@ def evaluate(similarity_score, actual_label, dataset_base_folder=None, values=No
 
     reference_list, probe_list, label_reference_list, label_probe_list = values
 
-    thresholds = np.linspace(1, 0, num=50)
+    thresholds = np.linspace(1, 0, num=500)
 
     FNMRs = []
     FMRs = []
     thresholds_list = []
     thresholds_false_images_dict = dict()
-    for thresh in thresholds:
+    for thresh in tqdm(thresholds):
         false_non_match = 0.0
         true_non_match = 0.0
         false_match = 0.0

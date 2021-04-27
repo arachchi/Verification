@@ -13,13 +13,13 @@ from maskcomp_evaluation import evaluate
 # datasets = ["feifei_front_align", "feifei_original", "georgia_tech_crop", "georgia_tech_non_crop", "sof_original",
 #             "sof_whole_images", "youtube_faces_categories", "lfw"]
 
-# datasets = ["feifei_original", "georgia_tech_non_crop", "sof_original", "feifei_front_align",
-#             "youtube_faces_categories", "lfw", "our_dataset"]
+datasets = ["feifei_original", "georgia_tech_non_crop", "sof_original", "feifei_front_align",
+            "youtube_faces_categories", "lfw", "our_dataset"]
 
-datasets = ["our_dataset"]
+# datasets = ["our_dataset"]
 
 evaluation_result_summary_csv = '../outputs/evaluation_dataset_results_new.csv'
-trained_model = "./inputs/model_vgg19_imagenet_10_2021_04_15_14_24_00.h5"
+trained_model = "./inputs/model_VGG16_CONTRASTIVE_VGGFACE2_5_2021_04_22_16_34_05.h5"
 
 
 def __get_evaluation_line_details(line):
