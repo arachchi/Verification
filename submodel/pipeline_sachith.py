@@ -3,10 +3,9 @@ import os
 import cv2
 import numpy as np
 from skimage.exposure import match_histograms
-from tqdm import tqdm
 
-from build_networks import build_siamese_network
-from config import *
+from product.config import *
+from product.submodel.model import Siamese
 
 
 class Pipeline:
@@ -71,7 +70,7 @@ class Pipeline:
         pass
 
     def __image_margin(self, image):
-        shape = IMG_SHAPE
+        shape = SHAPE
         background = np.zeros(shape, dtype=np.uint8)
         image_shape = image.shape
 
@@ -83,7 +82,7 @@ class Pipeline:
         return background
 
     def scale_and_resize_image(self, image):
-        shape = IMG_SHAPE
+        shape = SHAPE
         image_shape = image.shape
 
         if image_shape[0] > image_shape[1]:
@@ -121,6 +120,7 @@ class Pipeline:
     def open_image(self, image_path):
         if not PRODUCTION:
             image_path = f"{self.dataset_base_folder}\\{image_path}"
+        # print(image_path)
         image = cv2.imread(image_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
@@ -138,8 +138,9 @@ class Pipeline:
                 cropped_image = self.__crop_image(original_image, face_bbox[0], face_bbox[1], face_bbox[2],
                                                   face_bbox[3],
                                                   ratio=ratio)
-                # cropped_image = img_to_array(cropped_image)
-                # cropped_image = preprocess_input(cropped_image, version=1)
+                # cv2.imshow("test", cropped_image)
+                # cv2.waitKey(0)
+                # images.append(cv2.cvtColor(cropped_image, cv2.COLOR_RGB2BGR))
                 images.append(cropped_image)
 
         return np.array(images)
@@ -148,7 +149,7 @@ class Pipeline:
         # find darker image
         mean1 = np.average(cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY))
         mean2 = np.average(cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY))
-        # print(mean1, mean2)
+        # print (mean1, mean2)
         if mean1 < mean2:
             matched = match_histograms(image1, image2, multichannel=True)
             return matched, image2
@@ -161,104 +162,30 @@ class Pipeline:
             refs[i], probes[i] = self.exposure_correcion(refs[i], probes[i])
         return refs, probes
 
-    def get_mask_files(self, person):
-        person_folder_path = f"{self.dataset_base_folder}//{person}"
-        files = []
-        for file in os.listdir(person_folder_path):
-            if file.startswith('masked'):
-                name = f".//{person}/{file}"
-                face_bbox = self.bbox_dict.get(name)
-                if face_bbox is not None:
-                    files.append(name)
-        return files
-
-    def get_no_mask_files(self, person):
-        person_folder_path = f"{self.dataset_base_folder}//{person}"
-        files = []
-        for file in os.listdir(person_folder_path):
-            if file.startswith('masked'):
-                pass
-            else:
-                name = f".//{person}/{file}"
-                face_bbox = self.bbox_dict.get(name)
-                if face_bbox is not None:
-                    files.append(name)
-        return files
-
-    def process(self, dataset):
+    def process(self):
         comparison_scores = []
-        same_person_list = []
-        different_person_list = []
-        same_person_lower_threshold = 0.5
-        different_person_upper_threshold = 0.7
-        same_person = True
+        reference_list, probe_list, label_reference_list, label_probe_list = self.read_evaluation_list_file()
+        for idx, reference in enumerate(reference_list):
+            if idx > 1000:
+                break
 
-        if same_person:
-            for person in tqdm(os.listdir(self.dataset_base_folder)):
-                mask_files = self.get_mask_files(person)
-                no_mask_files = self.get_no_mask_files(person)
+            probe = probe_list[idx]
+            reference_images = self.__get_processed_inference_images(reference)
+            probe_images = self.__get_processed_inference_images(probe)
+            # reference_images , probe_images = self.get_histmatching_pairs(reference_images, probe_images)
+            self.siamese_model = self.siamese_model.cuda()
+            predicted_score = self.siamese_model.predict([reference_images, probe_images])
+            average_score = np.average(predicted_score)
+            comparison_scores.append(average_score)
 
-                for mask_image in mask_files:
-                    for no_mask_image in no_mask_files:
+        self.write_results_to_output(comparison_scores)
 
-                        score = self.inference_images(mask_image, no_mask_image)
-                        if score < same_person_lower_threshold:
-                            row = [mask_image, no_mask_image, '1', str(score)]
-                            same_person_list.append(row)
-
-            with open(f'{dataset}_same_person_similarity_scores.csv', 'w') as f:
-                for row in same_person_list:
-                    print(' '.join(row) + "\n")
-                    f.write(' '.join(row) + "\n")
-        else:
-            for person in tqdm(os.listdir(self.dataset_base_folder)):
-                mask_files = self.get_mask_files(person)
-                no_mask_files = self.get_no_mask_files(person)
-
-                for other_person in tqdm(os.listdir(self.dataset_base_folder)):
-
-                    if person == other_person:
-                        continue
-
-                    q_mask_files = self.get_mask_files(other_person)
-                    q_no_mask_files = self.get_no_mask_files(other_person)
-
-                    for mask_image in mask_files:
-
-                        for no_mask_image in q_no_mask_files:
-
-                            score = self.inference_images(mask_image, no_mask_image)
-                            if score > different_person_upper_threshold:
-                                row = [mask_image, no_mask_image, '0', str(score)]
-                                different_person_list.append(row)
-
-                            break
-                        break
-
-                    for mask_image in q_mask_files:
-                        for no_mask_image in no_mask_files:
-
-                            score = self.inference_images(mask_image, no_mask_image)
-                            if score > different_person_upper_threshold:
-                                row = [mask_image, no_mask_image, '0', str(score)]
-                                different_person_list.append(row)
-
-                            break
-                        break
-            with open(f'{dataset}_different_person_similarity_scores.csv', 'w') as f:
-                for row in different_person_list:
-                    print(' '.join(row) + "\n")
-                    f.write(' '.join(row) + "\n")
         return comparison_scores
 
-    def inference_images(self, reference, probe):
-        reference_images = self.__get_processed_inference_images(reference)
-        probe_images = self.__get_processed_inference_images(probe)
+    def __get_evaluation_line_details(self, line):
+        reference, probe, label_reference, label_probe = line.split(" ")
 
-        self.siamese_model = self.siamese_model.cuda()
-        predicted_score = self.siamese_model.predict([reference_images, probe_images])
-        average_score = np.average(predicted_score)
-        return average_score
+        return reference.strip(), probe.strip(), label_reference.strip(), label_probe.strip()
 
     def __get_landmark_line_details(self, line):
         values = line.split(" ")
@@ -271,20 +198,12 @@ class Pipeline:
 
         return file_name, bbox, facial_key_points
 
-    def __get_evaluation_line_details(self, line):
-        reference, probe, label_reference, label_probe = line.split(" ")
-
-        return reference.strip(), probe.strip(), label_reference.strip(), label_probe.strip()
-
     def read_evaluation_list_file(self):
         reference_list, probe_list, label_reference_list, label_probe_list = [], [], [], []
         if os.path.isfile(self.evaluation_list_file):
             with open(self.evaluation_list_file, 'r', newline='') as file:
                 lines = file.readlines()
-                i = 0
                 for line in lines:
-                    i += 1
-
                     reference, probe, label_reference, label_probe = self.__get_evaluation_line_details(line)
                     reference_list.append(reference)
                     probe_list.append(probe)

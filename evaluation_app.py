@@ -14,9 +14,10 @@ from maskcomp_evaluation import evaluate
 #             "sof_whole_images", "youtube_faces_categories", "lfw"]
 
 datasets = ["feifei_original", "georgia_tech_non_crop", "sof_original", "feifei_front_align",
-            "youtube_faces_categories", "lfw", "our_dataset"]
+            "youtube_faces_categories", "lfw"]
 
 # datasets = ["our_dataset"]
+# datasets = ["feifei_original"]
 
 evaluation_result_summary_csv = '../outputs/evaluation_dataset_results_new.csv'
 trained_model = "./inputs/model_VGG16_CONTRASTIVE_VGGFACE2_5_2021_04_22_16_34_05.h5"
@@ -80,21 +81,21 @@ with open(evaluation_result_summary_csv, 'w', newline='') as file:
         landmarks_file = f".\\inputs\\landmark_list_{dataset}.txt"
         output_file = f".\\outputs\\score_{dataset}.txt"
 
-        true_labels = get_true_labels(evaluation_file, input_evaluation_file)
-        true_labels = np.array(true_labels).astype(int)
-        row = [trained_model, input_evaluation_file]
+        # true_labels = get_true_labels(evaluation_file, input_evaluation_file)
+        # true_labels = np.array(true_labels).astype(int)
+        # row = [trained_model, input_evaluation_file]
 
         pipeline = Pipeline(input_evaluation_file, landmarks_file, output_file, trained_model, dataset_base_folder)
 
-        similarity_score = pipeline.process()
-        reference_list, probe_list, label_reference_list, label_probe_list = pipeline.read_evaluation_list_file()
-        values = [reference_list, probe_list, label_reference_list, label_probe_list]
-        print(similarity_score)
-        print(true_labels)
-
-        [fnmr_fmr0, fnmr_fmr100, fnmr_fmr1000, eer] = evaluate(similarity_score, true_labels, dataset_base_folder,
-                                                               values)
-        row.extend([fnmr_fmr0, fnmr_fmr100, fnmr_fmr1000, eer])
-        writer.writerow(row)
-        print(input_evaluation_file, fnmr_fmr0, fnmr_fmr100, fnmr_fmr1000, eer)
-        print(f"Accuracy {1 - eer}  Rank {fnmr_fmr100}")
+        similarity_score = pipeline.process(dataset)
+        # reference_list, probe_list, label_reference_list, label_probe_list = pipeline.read_evaluation_list_file()
+        # values = [reference_list, probe_list, label_reference_list, label_probe_list]
+        # print(similarity_score)
+        # print(true_labels)
+        #
+        # [fnmr_fmr0, fnmr_fmr100, fnmr_fmr1000, eer] = evaluate(similarity_score, true_labels, dataset_base_folder,
+        #                                                        values)
+        # row.extend([fnmr_fmr0, fnmr_fmr100, fnmr_fmr1000, eer])
+        # writer.writerow(row)
+        # print(input_evaluation_file, fnmr_fmr0, fnmr_fmr100, fnmr_fmr1000, eer)
+        # print(f"Accuracy {1 - eer}  Rank {fnmr_fmr100}")
