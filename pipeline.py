@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 from build_networks import build_siamese_network
 from config import *
+from submodel.model import Siamese
 
 
 class Pipeline:
@@ -189,8 +190,8 @@ class Pipeline:
         comparison_scores = []
         same_person_list = []
         different_person_list = []
-        same_person_lower_threshold = 0.5
-        different_person_upper_threshold = 0.7
+        same_person_lower_threshold = 0.9
+        different_person_upper_threshold = 0.3
         same_person = True
 
         if same_person:

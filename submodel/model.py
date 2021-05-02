@@ -72,7 +72,7 @@ class Siamese(nn.Module):
     def __init__(self):
         super(Siamese, self).__init__()
         self.conv = models.__dict__['resnet50'](pretrained=True)
-        self.load_weights()
+        #self.load_weights()
         self.conv = torch.nn.Sequential(*(list(self.conv.children())[:-1]))
         print((self.conv))
         self.liner = nn.Sequential(nn.Linear(2048, 512), nn.Sigmoid())
