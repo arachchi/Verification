@@ -6,7 +6,7 @@ from skimage.exposure import match_histograms
 from tqdm import tqdm
 
 from config import *
-from submodel.model import Siamese
+from model import Siamese
 
 
 class Pipeline:
@@ -139,8 +139,6 @@ class Pipeline:
             for ratio in [0.6]:
                 cropped_image = self.__crop_image(original_image, face_bbox[0], face_bbox[1], face_bbox[2],
                                                   face_bbox[3], ratio=ratio)
-                # cropped_image = img_to_array(cropped_image)
-                # cropped_image = preprocess_input(cropped_image, version=1)
                 images.append(cropped_image)
 
         return np.array(images)
@@ -162,31 +160,7 @@ class Pipeline:
             refs[i], probes[i] = self.exposure_correcion(refs[i], probes[i])
         return refs, probes
 
-    def get_mask_files(self, person):
-        person_folder_path = f"{self.dataset_base_folder}//{person}"
-        files = []
-        for file in os.listdir(person_folder_path):
-            if file.startswith('masked'):
-                name = f".//{person}/{file}"
-                face_bbox = self.bbox_dict.get(name)
-                if face_bbox is not None:
-                    files.append(name)
-        return files
-
-    def get_no_mask_files(self, person):
-        person_folder_path = f"{self.dataset_base_folder}//{person}"
-        files = []
-        for file in os.listdir(person_folder_path):
-            if file.startswith('masked'):
-                pass
-            else:
-                name = f".//{person}/{file}"
-                face_bbox = self.bbox_dict.get(name)
-                if face_bbox is not None:
-                    files.append(name)
-        return files
-
-    def process(self, dataset):
+    def process(self):
         comparison_scores = []
         reference_list, probe_list, label_reference_list, label_probe_list = self.read_evaluation_list_file()
         for idx, reference in enumerate(tqdm(reference_list)):
@@ -232,10 +206,8 @@ class Pipeline:
         if os.path.isfile(self.evaluation_list_file):
             with open(self.evaluation_list_file, 'r', newline='') as file:
                 lines = file.readlines()
-                i = 0
-                for line in lines:
-                    i += 1
 
+                for line in lines:
                     reference, probe, label_reference, label_probe = self.__get_evaluation_line_details(line)
                     reference_list.append(reference)
                     probe_list.append(probe)

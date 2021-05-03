@@ -1,4 +1,4 @@
-SIAMESE_MODEL_PATH = "../outputs/model_vgg19_imagenet_10_2021_04_15_14_24_00.h5"
-PRODUCTION = False
+SIAMESE_MODEL_PATH = "./models/model-inter-695001.pt"
+PRODUCTION = True
 DATASET_BASE_FOLDER = "D:\Sanka\Academic\FaceComp\evalution_dataset\evaluation_datasets\evaluation_datasets\eval\\"
 IMG_SHAPE = (224, 224, 3)
