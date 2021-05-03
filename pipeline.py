@@ -5,7 +5,6 @@ import numpy as np
 from skimage.exposure import match_histograms
 from tqdm import tqdm
 
-from build_networks import build_siamese_network
 from config import *
 from submodel.model import Siamese
 
@@ -123,6 +122,8 @@ class Pipeline:
         if not PRODUCTION:
             image_path = f"{self.dataset_base_folder}\\{image_path}"
         image = cv2.imread(image_path)
+        if image is None:
+            print(image_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
 
@@ -135,10 +136,9 @@ class Pipeline:
 
         face_bbox = self.bbox_dict.get(image_path)
         if face_bbox is not None:
-            for ratio in [0.5, 0.6, 0.7]:
+            for ratio in [0.6]:
                 cropped_image = self.__crop_image(original_image, face_bbox[0], face_bbox[1], face_bbox[2],
-                                                  face_bbox[3],
-                                                  ratio=ratio)
+                                                  face_bbox[3], ratio=ratio)
                 # cropped_image = img_to_array(cropped_image)
                 # cropped_image = preprocess_input(cropped_image, version=1)
                 images.append(cropped_image)
@@ -188,68 +188,17 @@ class Pipeline:
 
     def process(self, dataset):
         comparison_scores = []
-        same_person_list = []
-        different_person_list = []
-        same_person_lower_threshold = 0.9
-        different_person_upper_threshold = 0.3
-        same_person = True
+        reference_list, probe_list, label_reference_list, label_probe_list = self.read_evaluation_list_file()
+        for idx, reference in enumerate(tqdm(reference_list)):
+            if idx > 1000:
+                break
 
-        if same_person:
-            for person in tqdm(os.listdir(self.dataset_base_folder)):
-                mask_files = self.get_mask_files(person)
-                no_mask_files = self.get_no_mask_files(person)
+            probe = probe_list[idx]
+            score = self.inference_images(reference, probe)
 
-                for mask_image in mask_files:
-                    for no_mask_image in no_mask_files:
+            comparison_scores.append(score)
 
-                        score = self.inference_images(mask_image, no_mask_image)
-                        if score < same_person_lower_threshold:
-                            row = [mask_image, no_mask_image, '1', str(score)]
-                            same_person_list.append(row)
-
-            with open(f'{dataset}_same_person_similarity_scores.csv', 'w') as f:
-                for row in same_person_list:
-                    print(' '.join(row) + "\n")
-                    f.write(' '.join(row) + "\n")
-        else:
-            for person in tqdm(os.listdir(self.dataset_base_folder)):
-                mask_files = self.get_mask_files(person)
-                no_mask_files = self.get_no_mask_files(person)
-
-                for other_person in tqdm(os.listdir(self.dataset_base_folder)):
-
-                    if person == other_person:
-                        continue
-
-                    q_mask_files = self.get_mask_files(other_person)
-                    q_no_mask_files = self.get_no_mask_files(other_person)
-
-                    for mask_image in mask_files:
-
-                        for no_mask_image in q_no_mask_files:
-
-                            score = self.inference_images(mask_image, no_mask_image)
-                            if score > different_person_upper_threshold:
-                                row = [mask_image, no_mask_image, '0', str(score)]
-                                different_person_list.append(row)
-
-                            break
-                        break
-
-                    for mask_image in q_mask_files:
-                        for no_mask_image in no_mask_files:
-
-                            score = self.inference_images(mask_image, no_mask_image)
-                            if score > different_person_upper_threshold:
-                                row = [mask_image, no_mask_image, '0', str(score)]
-                                different_person_list.append(row)
-
-                            break
-                        break
-            with open(f'{dataset}_different_person_similarity_scores.csv', 'w') as f:
-                for row in different_person_list:
-                    print(' '.join(row) + "\n")
-                    f.write(' '.join(row) + "\n")
+        self.write_results_to_output(comparison_scores)
         return comparison_scores
 
     def inference_images(self, reference, probe):
@@ -258,6 +207,7 @@ class Pipeline:
 
         self.siamese_model = self.siamese_model.cuda()
         predicted_score = self.siamese_model.predict([reference_images, probe_images])
+
         average_score = np.average(predicted_score)
         return average_score
 

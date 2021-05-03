@@ -4,18 +4,15 @@ import os
 import numpy as np
 from tqdm import tqdm
 
-from config import DATASET_BASE_FOLDER
+from config import DATASET_BASE_FOLDER, MODEL_NAME
 from pipeline import Pipeline
 from maskcomp_evaluation import evaluate
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
-# datasets = ["feifei_front_align", "feifei_original", "georgia_tech_crop", "georgia_tech_non_crop", "sof_original",
-#             "sof_whole_images", "youtube_faces_categories", "lfw"]
+datasets = ["feifei_original", "georgia_tech_non_crop", "sof_original", "feifei_front_align",
+            "youtube_faces_categories", "lfw", "our_dataset"]
 
-datasets = [ "lfw"]
-
-# datasets = ["our_dataset"]
 # datasets = ["feifei_original"]
 
 evaluation_result_summary_csv = '../outputs/evaluation_dataset_results_new.csv'
@@ -72,13 +69,18 @@ def get_true_labels(evaluation_file, input_evaluation_file):
 base_folder = DATASET_BASE_FOLDER
 with open(evaluation_result_summary_csv, 'w', newline='') as file:
     writer = csv.writer(file)
-    for dataset in tqdm(datasets):
+    for dataset in datasets:
         dataset_base_folder = f"{base_folder}\\{dataset}\\"
 
         evaluation_file = f".\\inputs\\evaluation_{dataset}.txt"
         input_evaluation_file = f".\\inputs\\landmark_evaluation_inut_{dataset}.txt"
         landmarks_file = f".\\inputs\\landmark_list_{dataset}.txt"
-        output_file = f".\\outputs\\score_{dataset}.txt"
+
+        saving_model_path = f".\\outputs\\{MODEL_NAME[:-3]}"
+        if not os.path.isdir(saving_model_path):
+            os.mkdir(saving_model_path)
+
+        output_file = f"{saving_model_path}\\score_{dataset}.txt"
 
         # true_labels = get_true_labels(evaluation_file, input_evaluation_file)
         # true_labels = np.array(true_labels).astype(int)
