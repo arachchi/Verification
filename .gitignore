@@ -370,3 +370,4 @@ Thumbs.db
 ./outputs/*
 inputs/*
 *.csv
+models/*
