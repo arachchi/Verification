@@ -6,34 +6,8 @@ import torch.nn.functional as F
 import torchvision.models as models
 from torchvision import transforms
 
-from config import *
-
 
 class Siamese(nn.Module):
-    # Load pretrained weights (from unsupervised model)
-    def load_weights(self):
-        # load from pre-trained, before DistributedDataParallel constructor
-        weightpath = SIAMESE_MODEL_PATH
-        if os.path.isfile(weightpath):
-            print("=> loading checkpoint '{}'".format(weightpath))
-            checkpoint = torch.load(weightpath, map_location="cpu")
-
-            # rename pre-trained keys
-            state_dict = checkpoint['state_dict']
-            for k in list(state_dict.keys()):
-                # retain only encoder_q up to before the embedding layer
-                if k.startswith('module.encoder_q') and not k.startswith('module.encoder_q.fc'):
-                    # remove prefix
-                    state_dict[k[len("module.encoder_q."):]] = state_dict[k]
-                # delete renamed or unused k
-                del state_dict[k]
-
-            msg = self.conv.load_state_dict(state_dict, strict=False)
-            assert set(msg.missing_keys) == {"fc.weight", "fc.bias"}
-
-            print("=> loaded pre-trained model '{}'".format(weightpath))
-        else:
-            print("=> no checkpoint found at '{}'".format(weightpath))
 
     # Load trained weights (from supervised model)
     def load_weights_2(self, path):
@@ -72,7 +46,7 @@ class Siamese(nn.Module):
         if (count1 < 0.9 * count):
             param.requires_grad = False
 
-    def __init__(self):
+    def __init__(self, model_path):
         super(Siamese, self).__init__()
         self.conv = models.__dict__['resnet50'](pretrained=True)
         # self.load_weights()
@@ -81,7 +55,7 @@ class Siamese(nn.Module):
         self.liner = nn.Sequential(nn.Linear(2048, 512), nn.Sigmoid())
         self.out = nn.Linear(512, 1)
 
-        self.load_weights_2(SIAMESE_MODEL_PATH)
+        self.load_weights_2(model_path)
         # self.load_weights_2('0.47_transfer_cc_50_model-inter-164001.pt')
         # Remove to disable freezing pretrained representation
         self.freeze_representation()

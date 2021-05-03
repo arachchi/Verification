@@ -14,12 +14,7 @@ class Pipeline:
     def __init__(self, evaluation_list_file, landmarks_file, output_path, model_path=None, dataset_base_folder=None):
         self.evaluation_list_file = evaluation_list_file
 
-        if PRODUCTION:
-            self.model_path = SIAMESE_MODEL_PATH
-            self.dataset_base_folder = DATASET_BASE_FOLDER
-        else:
-            self.model_path = model_path
-            self.dataset_base_folder = dataset_base_folder
+        self.model_paths = MODEL_PATHS
 
         self.bbox_dict = dict()
         self.facial_key_points_dict = dict()
@@ -36,19 +31,12 @@ class Pipeline:
             exit(0)
 
         self.output_path = output_path
-        # self.siamese_model = self.build_models()
-        self.siamese_model = self.build_simple_models()
 
-    def build_simple_models(self):
-        # model = build_siamese_network_vgg16(0.1)
-        # model = build_siamese_network_MN(0.8)
-        # model = build_siamese_network_efb3(0.4)
-        # model.load_weights(self.model_path)
-        # return model
-        model = Siamese()
+    def build_simple_models(self, model_path):
+        model = Siamese(model_path)
         return model
 
-    def build_models(self):
+    def build_models(self, model_path):
         '''
         model, back_bone, distance_network, sister_fc_model = build_siamese_network(None)
 
@@ -64,7 +52,7 @@ class Pipeline:
         model.load_weights(self.model_path)
         return model
         '''
-        model = Siamese()
+        model = Siamese(model_path)
         return model
 
     def evaluate_images(self, reference_image, reference_bbox, probe_image, probe_bbox, true_label):
@@ -161,18 +149,26 @@ class Pipeline:
         return refs, probes
 
     def process(self):
-        comparison_scores = []
+
         reference_list, probe_list, label_reference_list, label_probe_list = self.read_evaluation_list_file()
-        for idx, reference in enumerate(tqdm(reference_list)):
-            if idx > 1000:
-                break
 
-            probe = probe_list[idx]
-            score = self.inference_images(reference, probe)
+        comparison_scores = None
+        for model_path in self.model_paths:
+            scores = []
+            self.siamese_model = self.build_models(model_path)
+            for idx, reference in enumerate(tqdm(reference_list)):
+                probe = probe_list[idx]
+                score = self.inference_images(reference, probe)
 
-            comparison_scores.append(score)
-
+                scores.append(score)
+            scores = np.array(scores)
+            if comparison_scores is None:
+                comparison_scores = scores
+            else:
+                comparison_scores += scores
+        comparison_scores /= len(self.model_paths)
         self.write_results_to_output(comparison_scores)
+
         return comparison_scores
 
     def inference_images(self, reference, probe):
