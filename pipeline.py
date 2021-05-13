@@ -5,8 +5,8 @@ import numpy as np
 from skimage.exposure import match_histograms
 from tqdm import tqdm
 
-from config import *
-from model import Siamese
+from product.config import *
+from product.model import Siamese
 
 
 class Pipeline:
@@ -149,9 +149,10 @@ class Pipeline:
         return refs, probes
 
     def process(self):
-
+        print("Processing started.")
         reference_list, probe_list, label_reference_list, label_probe_list = self.read_evaluation_list_file()
-
+        print("Reading evaluation file list is done.")
+        print("Evaluation is started.")
         comparison_scores = None
         for model_path in self.model_paths:
             scores = []
@@ -167,8 +168,9 @@ class Pipeline:
             else:
                 comparison_scores += scores
         comparison_scores /= len(self.model_paths)
+        print("Evaluation is completed.")
         self.write_results_to_output(comparison_scores)
-
+        print("Writing the scores to the file is completed.")
         return comparison_scores
 
     def inference_images(self, reference, probe):

@@ -1,6 +1,6 @@
 import argparse
 
-from pipeline import Pipeline
+from product.pipeline import Pipeline
 
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(prog="Face similarity verification application",

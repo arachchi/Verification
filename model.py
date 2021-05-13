@@ -14,7 +14,6 @@ class Siamese(nn.Module):
         # load from pre-trained, before DistributedDataParallel constructor
         weightpath = path
         if os.path.isfile(weightpath):
-            print("=> loading checkpoint '{}'".format(weightpath))
             checkpoint = torch.load(weightpath, map_location="cpu")
 
             # rename pre-trained keys
@@ -29,8 +28,6 @@ class Siamese(nn.Module):
 
             msg = self.load_state_dict(state_dict, strict=False)
             # assert set(msg.missing_keys) == {"fc.weight", "fc.bias"}
-
-            print("=> loaded pre-trained model '{}'".format(weightpath))
         else:
             print("=> no checkpoint found at '{}'".format(weightpath))
 
